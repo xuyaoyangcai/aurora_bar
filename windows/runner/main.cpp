@@ -25,9 +25,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
   FlutterWindow window(project);
-  Win32Window::Point origin(10, 10);
-  Win32Window::Size size(1280, 720);
-  if (!window.Create(L"aurora_bar", origin, size)) {
+  // Start as a small bar at the right edge of the screen
+  int screen_width = GetSystemMetrics(SM_CXSCREEN);
+  int bar_width = 360;
+  int bar_height = 60;
+  Win32Window::Point origin(screen_width - bar_width - 0, 80);
+  Win32Window::Size size(bar_width, bar_height);
+  if (!window.Create(L"Aurora Bar", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);
