@@ -1,94 +1,101 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:screen_retriever/screen_retriever.dart';
+import 'state/app_state.dart';
+import 'widgets/bar_view.dart';
+import 'widgets/panel_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await _initWindow();
-  runApp(const AuroraBar());
-}
-
-Future<void> _initWindow() async {
   await windowManager.ensureInitialized();
 
-  const barSize = Size(360, 60);
+  const collapsedSize = Size(360, 60);
+  final display = await screenRetriever.getPrimaryDisplay();
+  final workArea = display.visibleSize ?? display.size;
+  final workOrigin = display.visiblePosition ?? Offset.zero;
+  final x = workOrigin.dx + workArea.width - collapsedSize.width - 12;
+  final y = workOrigin.dy + workArea.height * 0.2;
 
-  // Get screen size from platform dispatcher
-  final view = PlatformDispatcher.instance.views.first;
-  final screenSize = view.physicalSize / view.devicePixelRatio;
-
-  final x = screenSize.width - barSize.width;
-  final y = screenSize.height / 2 - barSize.height / 2;
-
-  await windowManager.setSize(barSize);
-  await windowManager.setPosition(Offset(x, y));
+  await windowManager.setAlwaysOnTop(true);
   await windowManager.setAsFrameless();
   await windowManager.setBackgroundColor(Colors.transparent);
-  await windowManager.setAlwaysOnTop(true);
-  await windowManager.setSkipTaskbar(false);
+  await windowManager.setSize(collapsedSize);
+  await windowManager.setPosition(Offset(x, y));
   await windowManager.show();
   await windowManager.focus();
+
+  final state = AppState();
+
+  runApp(MaterialApp(
+    debugShowCheckedModeBanner: false,
+    theme: ThemeData.dark().copyWith(
+      scaffoldBackgroundColor: Colors.transparent,
+    ),
+    home: AuroraApp(state: state, collapsedOrigin: Offset(x, y)),
+  ));
 }
 
-class AuroraBar extends StatelessWidget {
-  const AuroraBar({super.key});
+class AuroraApp extends StatefulWidget {
+  final AppState state;
+  final Offset collapsedOrigin;
+  const AuroraApp({super.key, required this.state, required this.collapsedOrigin});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: Colors.transparent,
-      ),
-      home: const BarWidget(),
-    );
+  State<AuroraApp> createState() => _AuroraAppState();
+}
+
+class _AuroraAppState extends State<AuroraApp> {
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.state.init().then((_) {
+      if (mounted) setState(() => _ready = true);
+    });
   }
-}
 
-class BarWidget extends StatefulWidget {
-  const BarWidget({super.key});
+  void _onToggle() {
+    widget.state.toggleExpanded();
+    final isExpanded = widget.state.isExpanded;
+    windowManager.setSize(isExpanded ? const Size(360, 420) : const Size(360, 60));
+    if (isExpanded) {
+      // When expanding, shift up slightly so the panel doesn't go off-screen
+      final newY = widget.collapsedOrigin.dy - 180;
+      windowManager.setPosition(Offset(widget.collapsedOrigin.dx, newY.clamp(0, 9999)));
+    } else {
+      windowManager.setPosition(widget.collapsedOrigin);
+    }
+  }
 
-  @override
-  State<BarWidget> createState() => _BarWidgetState();
-}
-
-class _BarWidgetState extends State<BarWidget> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: GestureDetector(
-        onPanUpdate: (details) {},
-        child: Container(
-          margin: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: const Color(0xCC1a1a2e),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.12),
-              width: 0.5,
+    if (!_ready) {
+      return const Scaffold(
+        backgroundColor: Colors.transparent,
+        body: BarView(clockOnly: true),
+      );
+    }
+    return ListenableBuilder(
+      listenable: widget.state,
+      builder: (context, _) {
+        if (!widget.state.isExpanded) {
+          return GestureDetector(
+            onTap: _onToggle,
+            child: const Scaffold(
+              backgroundColor: Colors.transparent,
+              body: BarView(),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
+          );
+        }
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: PanelView(
+            state: widget.state,
+            onCollapse: _onToggle,
           ),
-          child: const Center(
-            child: Text(
-              'Aurora',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 16,
-                fontWeight: FontWeight.w300,
-                letterSpacing: 4,
-              ),
-            ),
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
