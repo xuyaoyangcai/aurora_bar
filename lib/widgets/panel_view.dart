@@ -77,8 +77,10 @@ class _PanelViewState extends State<PanelView> {
 
   Future<void> _openClaude() async {
     try {
-      await Process.start('cmd', ['/c', 'start', 'https://claude.ai'],
-          mode: ProcessStartMode.detached);
+      await Process.start(
+        'cmd', ['/c', 'start', 'claude'],
+        mode: ProcessStartMode.detached,
+      );
     } catch (_) {}
   }
 
