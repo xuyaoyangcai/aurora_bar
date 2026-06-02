@@ -74,83 +74,88 @@ class _CompactTimePickerState extends State<CompactTimePicker> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1e1b4b).withOpacity(0.9),
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFF1e1b4b).withOpacity(0.98),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Date row: quick chips + custom picker
-          Row(children: [
-            _quickDateChip(0, 'Today'),
-            const SizedBox(width: 5),
-            _quickDateChip(1, 'Tom.'),
-            const SizedBox(width: 5),
-            _quickDateChip(3, '+3d'),
-            const SizedBox(width: 5),
-            _quickDateChip(7, '+7d'),
-            const Spacer(),
-            GestureDetector(
-              onTap: _pickDate,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.white.withOpacity(0.1)),
-                ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.calendar_today, size: 12, color: Color(0xFF818cf8)),
-                  const SizedBox(width: 4),
-                  Text(_dateLabel(), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w400)),
-                ]),
+          // Quick date chips — scrollable
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: [
+              _quickDateChip(0, 'Today'),
+              const SizedBox(width: 5),
+              _quickDateChip(1, 'Tom.'),
+              const SizedBox(width: 5),
+              _quickDateChip(3, '+3d'),
+              const SizedBox(width: 5),
+              _quickDateChip(7, '+7d'),
+            ]),
+          ),
+          const SizedBox(height: 8),
+          // Calendar picker button — full width
+          GestureDetector(
+            onTap: _pickDate,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white.withOpacity(0.1)),
               ),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                const Icon(Icons.calendar_today, size: 14, color: Color(0xFF818cf8)),
+                const SizedBox(width: 6),
+                Text(_dateLabel(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w400)),
+                const SizedBox(width: 6),
+                Icon(Icons.arrow_drop_down, size: 16, color: Colors.white.withOpacity(0.3)),
+              ]),
             ),
-          ]),
-          const SizedBox(height: 10),
-          // Time row: hour - minute + apply
+          ),
+          const SizedBox(height: 12),
+          // Time row
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             _timeStepper(
               value: _hour,
               onUp: () => setState(() => _hour = (_hour + 1) % 24),
               onDown: () => setState(() => _hour = (_hour - 1 + 24) % 24),
-              label: 'Hour',
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(':', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 22, fontWeight: FontWeight.w200)),
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Text(':', style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 24, fontWeight: FontWeight.w200)),
             ),
             _timeStepper(
               value: _minute,
               onUp: () => setState(() => _minute = (_minute + 5) % 60),
               onDown: () => setState(() => _minute = (_minute - 5 + 60) % 60),
-              label: 'Min',
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
             GestureDetector(
               onTap: _apply,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(colors: [Color(0xFF818cf8), Color(0xFFc084fc)]),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Text('Set', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
+                child: const Text('Set', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             GestureDetector(
               onTap: widget.onClear,
               child: Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(11),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.close, size: 14, color: Colors.white.withOpacity(0.4)),
+                child: Icon(Icons.close, size: 16, color: Colors.white.withOpacity(0.4)),
               ),
             ),
           ]),
@@ -178,28 +183,27 @@ class _CompactTimePickerState extends State<CompactTimePicker> {
     );
   }
 
-  Widget _timeStepper({required int value, required VoidCallback onUp, required VoidCallback onDown, required String label}) {
-    return Column(children: [
+  Widget _timeStepper({required int value, required VoidCallback onUp, required VoidCallback onDown}) {
+    return Column(mainAxisSize: MainAxisSize.min, children: [
       GestureDetector(
         onTap: onUp,
-        child: Icon(Icons.keyboard_arrow_up, size: 16, color: Colors.white.withOpacity(0.4)),
+        child: Icon(Icons.keyboard_arrow_up, size: 18, color: Colors.white.withOpacity(0.4)),
       ),
       Container(
-        width: 52,
-        height: 36,
+        width: 56,
+        height: 40,
         margin: const EdgeInsets.symmetric(vertical: 2),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
         ),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(value.toString().padLeft(2, '0'), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w300, letterSpacing: 1)),
-          Text(label, style: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 8)),
-        ]),
+        alignment: Alignment.center,
+        child: Text(value.toString().padLeft(2, '0'),
+          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w300)),
       ),
       GestureDetector(
         onTap: onDown,
-        child: Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.white.withOpacity(0.4)),
+        child: Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.white.withOpacity(0.4)),
       ),
     ]);
   }

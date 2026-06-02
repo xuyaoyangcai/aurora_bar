@@ -44,21 +44,23 @@ class _PanelViewState extends State<PanelView> {
     showDialog(
       context: context,
       builder: (ctx) => Center(
-        child: Container(
-          width: 340,
-          margin: const EdgeInsets.all(20),
-          child: Material(
-            color: Colors.transparent,
-            child: CompactTimePicker(
-              initial: _dueDate,
-              onPicked: (dt) {
-                setState(() => _dueDate = dt);
-                Navigator.of(ctx).pop();
-              },
-              onClear: () {
-                setState(() => _dueDate = null);
-                Navigator.of(ctx).pop();
-              },
+        child: SingleChildScrollView(
+          child: Container(
+            width: 340,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
+            child: Material(
+              color: Colors.transparent,
+              child: CompactTimePicker(
+                initial: _dueDate,
+                onPicked: (dt) {
+                  setState(() => _dueDate = dt);
+                  Navigator.of(ctx).pop();
+                },
+                onClear: () {
+                  setState(() => _dueDate = null);
+                  Navigator.of(ctx).pop();
+                },
+              ),
             ),
           ),
         ),
