@@ -84,9 +84,9 @@ class _AuroraAppState extends State<AuroraApp> {
           return GestureDetector(
             onTap: _expand,
             onPanStart: (_) => windowManager.startDragging(),
-            child: const Scaffold(
+            child: Scaffold(
               backgroundColor: Colors.transparent,
-              body: BarView(),
+              body: BarView(taskCount: widget.state.activeCount),
             ),
           );
         }

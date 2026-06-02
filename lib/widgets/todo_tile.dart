@@ -1,185 +1,220 @@
 import 'package:flutter/material.dart';
 import '../models/todo.dart';
 
-class TodoTile extends StatefulWidget {
+class TodoTile extends StatelessWidget {
   final Todo todo;
   final VoidCallback onToggle;
-  final VoidCallback? onRemove;
-  const TodoTile({super.key, required this.todo, required this.onToggle, this.onRemove});
+  final VoidCallback onDelete;
 
-  @override
-  State<TodoTile> createState() => _TodoTileState();
-}
+  const TodoTile({
+    super.key,
+    required this.todo,
+    required this.onToggle,
+    required this.onDelete,
+  });
 
-class _TodoTileState extends State<TodoTile>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fade;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 400),
-      vsync: this,
-    );
-    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    if (widget.todo.completed) _controller.value = 1.0;
+  String _deadlineLabel() {
+    final due = todo.dueDate;
+    if (due == null) return '';
+    final diff = due.difference(DateTime.now());
+    if (diff.inDays == 0) {
+      return 'Today ${due.hour}:${due.minute.toString().padLeft(2, '0')}';
+    }
+    if (diff.inDays == 1) {
+      return 'Tomorrow ${due.hour}:${due.minute.toString().padLeft(2, '0')}';
+    }
+    return '${due.month}/${due.day} ${due.hour}:${due.minute.toString().padLeft(2, '0')}';
   }
 
-  @override
-  void didUpdateWidget(TodoTile oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.todo.completed != oldWidget.todo.completed) {
-      if (widget.todo.completed) {
-        _controller.forward().then((_) {
-          if (mounted) {
-            Future.delayed(const Duration(milliseconds: 600), () {
-              widget.onRemove?.call();
-            });
-          }
-        });
-      } else {
-        _controller.reverse();
-      }
+  Color? _categoryColor() {
+    switch (todo.category) {
+      case 'urgent':
+        return const Color(0xFFf87171);
+      case 'work':
+        return const Color(0xFF60a5fa);
+      case 'personal':
+        return const Color(0xFF34d399);
+      default:
+        return null;
+    }
+  }
+
+  String _categoryLabel() {
+    switch (todo.category) {
+      case 'urgent':
+        return 'Urgent';
+      case 'work':
+        return 'Work';
+      case 'personal':
+        return 'Personal';
+      default:
+        return '';
     }
   }
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  String? _deadlineLabel() {
-    final due = widget.todo.dueDate;
-    if (due == null) return null;
-    final now = DateTime.now();
-    final diff = due.difference(now);
-    final label = diff.inDays == 0
-        ? 'Today ${due.hour}:${due.minute.toString().padLeft(2, '0')}'
-        : diff.inDays == 1
-            ? 'Tomorrow ${due.hour}:${due.minute.toString().padLeft(2, '0')}'
-            : '${due.month}/${due.day} ${due.hour}:${due.minute.toString().padLeft(2, '0')}';
-    return label;
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeInOut,
-      height: widget.todo.completed ? 0 : 52,
+    final deadline = _deadlineLabel();
+    final catColor = _categoryColor();
+    final catLabel = _categoryLabel();
+
+    final child = Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-      child: FadeTransition(
-        opacity: _fade,
-        child: GestureDetector(
-          onTap: widget.onToggle,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: widget.todo.completed
-                  ? Colors.white.withOpacity(0.03)
-                  : Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: widget.todo.completed
-                    ? Colors.white.withOpacity(0.05)
-                    : Colors.white.withOpacity(0.08),
-              ),
-            ),
-            child: Row(
-              children: [
-                _checkCircle(),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _titleText(),
-                      if (_deadlineLabel() != null) ...[
-                        const SizedBox(height: 2),
-                        _deadlineChip(),
-                      ],
-                    ],
-                  ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
+      ),
+      child: Row(
+        children: [
+          // Check circle — explicit tap target
+          GestureDetector(
+            onTap: onToggle,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: todo.completed
+                      ? const Color(0xFF818cf8)
+                      : Colors.white.withOpacity(0.25),
+                  width: 1.5,
                 ),
+                color: todo.completed
+                    ? const Color(0xFF818cf8)
+                    : Colors.transparent,
+              ),
+              child: todo.completed
+                  ? const Icon(Icons.check, size: 13, color: Colors.white)
+                  : null,
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  todo.title,
+                  style: TextStyle(
+                    color: todo.completed
+                        ? Colors.white.withOpacity(0.3)
+                        : Colors.white.withOpacity(0.85),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w300,
+                    decoration: todo.completed
+                        ? TextDecoration.lineThrough
+                        : null,
+                    decorationColor: Colors.white.withOpacity(0.2),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (deadline.isNotEmpty || catLabel.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Row(
+                      children: [
+                        if (deadline.isNotEmpty) ...[
+                          Icon(
+                            Icons.schedule,
+                            size: 10,
+                            color: todo.dueDate!.isBefore(DateTime.now()) &&
+                                    !todo.completed
+                                ? const Color(0xFFf87171)
+                                : const Color(0xFFc084fc).withOpacity(0.6),
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            deadline,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w300,
+                              color: todo.dueDate!.isBefore(DateTime.now()) &&
+                                      !todo.completed
+                                  ? const Color(0xFFf87171)
+                                  : const Color(0xFFc084fc).withOpacity(0.6),
+                            ),
+                          ),
+                        ],
+                        if (deadline.isNotEmpty && catLabel.isNotEmpty)
+                          const SizedBox(width: 8),
+                        if (catLabel.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: catColor!.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              catLabel,
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: catColor.withOpacity(0.8),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _checkCircle() {
-    final completed = widget.todo.completed;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      width: 20,
-      height: 20,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: completed
-              ? const Color(0xFF818cf8)
-              : Colors.white.withOpacity(0.3),
-          width: 1.5,
-        ),
-        color: completed
-            ? const Color(0xFF818cf8).withOpacity(0.9)
-            : Colors.transparent,
-      ),
-      child: completed
-          ? const Icon(Icons.check, size: 12, color: Colors.white)
-          : null,
-    );
-  }
-
-  Widget _titleText() {
-    return Text(
-      widget.todo.title,
-      style: TextStyle(
-        color: widget.todo.completed
-            ? Colors.white.withOpacity(0.3)
-            : Colors.white.withOpacity(0.85),
-        fontSize: 14,
-        fontWeight: FontWeight.w300,
-        decoration: widget.todo.completed
-            ? TextDecoration.lineThrough
-            : TextDecoration.none,
-        decorationColor: Colors.white.withOpacity(0.2),
-      ),
-      overflow: TextOverflow.ellipsis,
-    );
-  }
-
-  Widget _deadlineChip() {
-    final due = widget.todo.dueDate!;
-    final isOverdue = due.isBefore(DateTime.now()) && !widget.todo.completed;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          Icons.schedule,
-          size: 10,
-          color: isOverdue
-              ? const Color(0xFFf87171)
-              : const Color(0xFFc084fc).withOpacity(0.7),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          _deadlineLabel()!,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w300,
-            color: isOverdue
-                ? const Color(0xFFf87171)
-                : const Color(0xFFc084fc).withOpacity(0.7),
+          // Delete button
+          GestureDetector(
+            onTap: onDelete,
+            child: Icon(
+              Icons.close,
+              size: 14,
+              color: Colors.white.withOpacity(0.15),
+            ),
           ),
+        ],
+      ),
+    );
+
+    // Wrap in Dismissible for swipe-to-complete
+    return Dismissible(
+      key: Key(todo.id),
+      direction: DismissDirection.horizontal,
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          // Swipe right → complete
+          onToggle();
+        } else {
+          // Swipe left → delete
+          onDelete();
+        }
+        return false; // We handle state ourselves
+      },
+      background: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFF818cf8).withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
         ),
-      ],
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 20),
+        child: const Icon(Icons.check, color: Color(0xFF818cf8), size: 18),
+      ),
+      secondaryBackground: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFFf87171).withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        child: const Icon(Icons.delete_outline,
+            color: Color(0xFFf87171), size: 18),
+      ),
+      child: child,
     );
   }
 }

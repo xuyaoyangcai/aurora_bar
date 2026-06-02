@@ -9,6 +9,8 @@ class AppState extends ChangeNotifier {
   List<Todo> todos = [];
   bool _loaded = false;
 
+  int get activeCount => todos.where((t) => !t.completed).length;
+
   Future<void> init() async {
     if (_loaded) return;
     todos = await _storage.loadTodos();
@@ -21,11 +23,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addTodo(String title, {DateTime? dueDate}) {
+  void addTodo(String title, {DateTime? dueDate, String? category}) {
     final todo = Todo(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       title: title.trim(),
       dueDate: dueDate,
+      category: category,
     );
     todos.insert(0, todo);
     _save();
@@ -33,8 +36,9 @@ class AppState extends ChangeNotifier {
   }
 
   void toggleTodo(String id) {
-    final todo = todos.firstWhere((t) => t.id == id);
-    todo.completed = !todo.completed;
+    final idx = todos.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+    todos[idx].completed = !todos[idx].completed;
     _save();
     notifyListeners();
   }

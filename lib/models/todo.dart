@@ -4,6 +4,7 @@ class Todo {
   bool completed;
   final DateTime createdAt;
   DateTime? dueDate;
+  String? category; // 'personal', 'work', 'urgent'
 
   Todo({
     required this.id,
@@ -11,6 +12,7 @@ class Todo {
     this.completed = false,
     DateTime? createdAt,
     this.dueDate,
+    this.category,
   }) : createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
@@ -19,6 +21,7 @@ class Todo {
         'completed': completed,
         'createdAt': createdAt.toIso8601String(),
         'dueDate': dueDate?.toIso8601String(),
+        'category': category,
       };
 
   factory Todo.fromJson(Map<String, dynamic> json) => Todo(
@@ -29,5 +32,6 @@ class Todo {
         dueDate: json['dueDate'] != null
             ? DateTime.parse(json['dueDate'] as String)
             : null,
+        category: json['category'] as String?,
       );
 }
