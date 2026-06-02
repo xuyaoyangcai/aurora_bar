@@ -55,17 +55,18 @@ class _AuroraAppState extends State<AuroraApp> {
     });
   }
 
-  void _onToggle() {
+  Future<void> _expand() async {
+    await windowManager.setSize(const Size(360, 420));
+    final newY = widget.collapsedOrigin.dy - 180;
+    await windowManager.setPosition(
+        Offset(widget.collapsedOrigin.dx, newY.clamp(0, 9999)));
     widget.state.toggleExpanded();
-    final isExpanded = widget.state.isExpanded;
-    windowManager.setSize(isExpanded ? const Size(360, 420) : const Size(360, 60));
-    if (isExpanded) {
-      // When expanding, shift up slightly so the panel doesn't go off-screen
-      final newY = widget.collapsedOrigin.dy - 180;
-      windowManager.setPosition(Offset(widget.collapsedOrigin.dx, newY.clamp(0, 9999)));
-    } else {
-      windowManager.setPosition(widget.collapsedOrigin);
-    }
+  }
+
+  Future<void> _collapse() async {
+    await windowManager.setSize(const Size(360, 60));
+    await windowManager.setPosition(widget.collapsedOrigin);
+    widget.state.toggleExpanded();
   }
 
   @override
@@ -73,7 +74,7 @@ class _AuroraAppState extends State<AuroraApp> {
     if (!_ready) {
       return const Scaffold(
         backgroundColor: Colors.transparent,
-        body: BarView(clockOnly: true),
+        body: BarView(),
       );
     }
     return ListenableBuilder(
@@ -81,7 +82,8 @@ class _AuroraAppState extends State<AuroraApp> {
       builder: (context, _) {
         if (!widget.state.isExpanded) {
           return GestureDetector(
-            onTap: _onToggle,
+            onTap: _expand,
+            onPanStart: (_) => windowManager.startDragging(),
             child: const Scaffold(
               backgroundColor: Colors.transparent,
               body: BarView(),
@@ -92,7 +94,7 @@ class _AuroraAppState extends State<AuroraApp> {
           backgroundColor: Colors.transparent,
           body: PanelView(
             state: widget.state,
-            onCollapse: _onToggle,
+            onCollapse: _collapse,
           ),
         );
       },

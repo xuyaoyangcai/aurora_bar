@@ -21,10 +21,11 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addTodo(String title) {
+  void addTodo(String title, {DateTime? dueDate}) {
     final todo = Todo(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       title: title.trim(),
+      dueDate: dueDate,
     );
     todos.insert(0, todo);
     _save();

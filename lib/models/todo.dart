@@ -3,12 +3,14 @@ class Todo {
   final String title;
   bool completed;
   final DateTime createdAt;
+  DateTime? dueDate;
 
   Todo({
     required this.id,
     required this.title,
     this.completed = false,
     DateTime? createdAt,
+    this.dueDate,
   }) : createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
@@ -16,6 +18,7 @@ class Todo {
         'title': title,
         'completed': completed,
         'createdAt': createdAt.toIso8601String(),
+        'dueDate': dueDate?.toIso8601String(),
       };
 
   factory Todo.fromJson(Map<String, dynamic> json) => Todo(
@@ -23,5 +26,8 @@ class Todo {
         title: json['title'] as String,
         completed: json['completed'] as bool? ?? false,
         createdAt: DateTime.parse(json['createdAt'] as String),
+        dueDate: json['dueDate'] != null
+            ? DateTime.parse(json['dueDate'] as String)
+            : null,
       );
 }
