@@ -21,7 +21,6 @@ class _PanelViewState extends State<PanelView> {
   final _inputFocus = FocusNode();
   DateTime? _dueDate;
   String? _category;
-  bool _showTimePicker = false;
   final List<_Sparkle> _sparkles = [];
   late final Timer _sparkleTimer;
 
@@ -41,6 +40,31 @@ class _PanelViewState extends State<PanelView> {
     super.dispose();
   }
 
+  void _showTimePickerSheet() {
+    showDialog(
+      context: context,
+      builder: (ctx) => Center(
+        child: Container(
+          width: 340,
+          margin: const EdgeInsets.all(20),
+          child: Material(
+            color: Colors.transparent,
+            child: CompactTimePicker(
+              initial: _dueDate,
+              onPicked: (dt) {
+                setState(() => _dueDate = dt);
+                Navigator.of(ctx).pop();
+              },
+              onClear: () {
+                setState(() => _dueDate = null);
+                Navigator.of(ctx).pop();
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
   void _addSparkle(Offset pos) {
     setState(() {
       _sparkles.add(_Sparkle(pos));
@@ -57,7 +81,6 @@ class _PanelViewState extends State<PanelView> {
     setState(() {
       _dueDate = null;
       _category = null;
-      _showTimePicker = false;
     });
     widget.state.addTodo(text, dueDate: due, category: cat);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -67,10 +90,12 @@ class _PanelViewState extends State<PanelView> {
 
   void _toggleTodo(String id) {
     widget.state.toggleTodo(id);
-    final todo = widget.state.todos.firstWhere((t) => t.id == id);
-    if (todo.completed) {
+    // Only schedule auto-remove if becoming completed; re-check before deleting
+    if (widget.state.todos.any((t) => t.id == id && t.completed)) {
       Future.delayed(const Duration(seconds: 2), () {
-        widget.state.removeTodo(id);
+        if (widget.state.todos.any((t) => t.id == id && t.completed)) {
+          widget.state.removeTodo(id);
+        }
       });
     }
   }
@@ -130,15 +155,6 @@ class _PanelViewState extends State<PanelView> {
             const SizedBox(height: 6),
             _buildCategories(),
             if (_dueDate != null) _dueBadge(),
-            if (_showTimePicker)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: CompactTimePicker(
-                  initial: _dueDate,
-                  onPicked: (dt) => setState(() => _dueDate = dt),
-                  onClear: () => setState(() => _dueDate = null),
-                ),
-              ),
             const SizedBox(height: 8),
             Expanded(child: ListenableBuilder(
               listenable: widget.state,
@@ -225,7 +241,7 @@ class _PanelViewState extends State<PanelView> {
             ),
           )),
           GestureDetector(
-            onTap: () => setState(() => _showTimePicker = !_showTimePicker),
+            onTap: _showTimePickerSheet,
             child: Container(
               width: 32, height: 32,
               margin: const EdgeInsets.only(right: 4),
