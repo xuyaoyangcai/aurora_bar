@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
+import '../services/nlp_parser.dart';
 import '../state/app_state.dart';
-import '../models/todo.dart';
 import 'todo_tile.dart';
 import 'time_picker.dart';
 
@@ -78,13 +78,17 @@ class _PanelViewState extends State<PanelView> {
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
     _inputCtrl.clear();
-    final due = _dueDate;
+
+    final parsed = NlpParser.parse(text);
+    final due = _dueDate ?? parsed.dueDate;
     final cat = _category;
+    final tags = parsed.tags;
+
     setState(() {
       _dueDate = null;
       _category = null;
     });
-    widget.state.addTodo(text, dueDate: due, category: cat);
+    widget.state.addTodo(parsed.title, dueDate: due, category: cat, tags: tags);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _inputFocus.requestFocus();
     });
@@ -148,10 +152,50 @@ class _PanelViewState extends State<PanelView> {
       child: Stack(
         children: [
           Column(children: [
-            GestureDetector(
-              onTap: widget.onCollapse,
-              onPanStart: (_) => windowManager.startDragging(),
-              child: const Padding(padding: EdgeInsets.only(top: 14, bottom: 6), child: _MiniClock()),
+            Padding(
+              padding: const EdgeInsets.only(top: 14, bottom: 6, left: 16, right: 14),
+              child: Row(children: [
+                const Spacer(),
+                GestureDetector(
+                  onTap: widget.onCollapse,
+                  onPanStart: (_) => windowManager.startDragging(),
+                  child: const _MiniClock(),
+                ),
+                const Spacer(),
+                // Peek button
+                GestureDetector(
+                  onTap: () {
+                    // peek from panel: first collapse, then peek
+                    widget.onCollapse();
+                  },
+                  child: Container(
+                    width: 26, height: 26,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.chevron_right, size: 14,
+                        color: Colors.white.withOpacity(0.3)),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                // Quit button
+                GestureDetector(
+                  onTap: () {
+                    windowManager.destroy();
+                    Future.delayed(const Duration(milliseconds: 500), () => exit(0));
+                  },
+                  child: Container(
+                    width: 26, height: 26,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.power_settings_new, size: 12,
+                        color: Colors.white.withOpacity(0.3)),
+                  ),
+                ),
+              ]),
             ),
             _buildInput(),
             const SizedBox(height: 6),

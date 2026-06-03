@@ -6,6 +6,7 @@ class AppState extends ChangeNotifier {
   final StorageService _storage = StorageService();
 
   bool isExpanded = false;
+  bool isPeeking = false;
   List<Todo> todos = [];
   bool _loaded = false;
 
@@ -23,12 +24,21 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addTodo(String title, {DateTime? dueDate, String? category}) {
+  void togglePeek() {
+    isPeeking = !isPeeking;
+    notifyListeners();
+  }
+
+  Future<void> saveConfig(Map<String, dynamic> config) =>
+      _storage.saveConfig(config);
+
+  void addTodo(String title, {DateTime? dueDate, String? category, List<String>? tags}) {
     final todo = Todo(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       title: title.trim(),
       dueDate: dueDate,
       category: category,
+      tags: tags,
     );
     todos.insert(0, todo);
     _save();
