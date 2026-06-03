@@ -1,9 +1,14 @@
 import 'package:flutter/foundation.dart';
 import '../models/todo.dart';
+import '../services/note_linker.dart';
 import '../services/storage_service.dart';
 
 class AppState extends ChangeNotifier {
   final StorageService _storage = StorageService();
+  final NoteLinker noteLinker = NoteLinker();
+
+  String _notesDir = '';
+  String get notesDir => _notesDir;
 
   bool isExpanded = false;
   bool isPeeking = false;
@@ -15,7 +20,17 @@ class AppState extends ChangeNotifier {
   Future<void> init() async {
     if (_loaded) return;
     todos = await _storage.loadTodos();
+    final config = await _storage.loadConfig();
+    _notesDir = config['notesDir'] as String? ?? '';
+    if (_notesDir.isNotEmpty) noteLinker.setNotesDir(_notesDir);
     _loaded = true;
+    notifyListeners();
+  }
+
+  void setNotesDir(String dir) {
+    _notesDir = dir;
+    noteLinker.setNotesDir(dir);
+    saveConfig({'notesDir': dir});
     notifyListeners();
   }
 
