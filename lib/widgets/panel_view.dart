@@ -125,8 +125,9 @@ class _PanelViewState extends State<PanelView> {
       ollamaResult = await OllamaNlpService.parse(text);
     } catch (_) {}
 
-    // Merge: regex date is more reliable; Ollama title/tags if available
-    final due = _dueDate ?? regexResult.dueDate;
+    // Merge: Ollama date preferred (it understands "明天之前" → tonight 23:59);
+    // regex fallback for simple patterns. Manual pick has top priority.
+    final due = _dueDate ?? ollamaResult?.dueDate ?? regexResult.dueDate;
     final title = ollamaResult?.title ?? regexResult.title;
     final tags = <String>{
       ...regexResult.tags,

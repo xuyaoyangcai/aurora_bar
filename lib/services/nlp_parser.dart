@@ -52,6 +52,15 @@ class NlpParser {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
+    // "明天之前" → today 23:59
+    if (RegExp(r'明天之前').hasMatch(text)) {
+      return today.add(const Duration(hours: 23, minutes: 59));
+    }
+    // "后天之前" → tomorrow 23:59
+    if (RegExp(r'后天之前').hasMatch(text)) {
+      return today.add(const Duration(days: 1, hours: 23, minutes: 59));
+    }
+
     // "明天下午3点" / "明天3点" / "明天早上7点"
     final matchTH = _tomorrowHourRe.firstMatch(text);
     if (matchTH != null) {
