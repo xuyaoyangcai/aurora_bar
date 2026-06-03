@@ -65,14 +65,14 @@ class NlpParser {
       return today.add(const Duration(days: 1)).add(Duration(hours: h, minutes: m));
     }
 
-    // "明天" without specific time → 9:00
+    // "明天" without specific hour → default to period-appropriate time
     if (_tomorrowRe.hasMatch(text)) {
-      return today.add(const Duration(days: 1, hours: 9));
+      return today.add(Duration(days: 1, hours: _defaultHour(text)));
     }
 
-    // "后天" → 9:00
+    // "后天" without specific hour
     if (_dayAfterRe.hasMatch(text)) {
-      return today.add(const Duration(days: 2, hours: 9));
+      return today.add(Duration(days: 2, hours: _defaultHour(text)));
     }
 
     // "今天下午3点" / "今晚8点" / "今天3点半" / "今天早上7点" / "今天中午12点"
@@ -94,7 +94,7 @@ class NlpParser {
       final dayChar = matchNW.group(1)!;
       final targetWday = _weekdayFromChinese(dayChar);
       final daysUntil = (targetWday - now.weekday + 7) % 7 + 7;
-      return today.add(Duration(days: daysUntil, hours: 9));
+      return today.add(Duration(days: daysUntil, hours: _defaultHour(text)));
     }
 
     // "周X" / "星期X" → this week (or next if already passed)
@@ -103,9 +103,9 @@ class NlpParser {
       final dayChar = matchTW.group(1)!;
       final targetWday = _weekdayFromChinese(dayChar);
       var daysUntil = (targetWday - now.weekday + 7) % 7;
-      final candidate = today.add(Duration(days: daysUntil, hours: 9));
+      final candidate = today.add(Duration(days: daysUntil, hours: _defaultHour(text)));
       if (!candidate.isAfter(now)) daysUntil += 7;
-      return today.add(Duration(days: daysUntil, hours: 9));
+      return today.add(Duration(days: daysUntil, hours: _defaultHour(text)));
     }
 
     // "X月Y日" / "X月Y号"
@@ -113,7 +113,7 @@ class NlpParser {
     if (matchMD != null) {
       final m = int.parse(matchMD.group(1)!);
       final d = int.parse(matchMD.group(2)!);
-      return DateTime(now.year, m, d, 9);
+      return DateTime(now.year, m, d, _defaultHour(text));
     }
 
     // "晚上8点" / "下午3点" / "早上9点" (no date prefix)
@@ -137,6 +137,15 @@ class NlpParser {
     }
 
     return null;
+  }
+
+  /// Default hour when no specific time is given, based on period hints in text.
+  static int _defaultHour(String text) {
+    if (text.contains('晚') || text.contains('夜')) return 20;
+    if (text.contains('下')) return 15;
+    if (text.contains('中')) return 12;
+    if (text.contains('早') || text.contains('上')) return 9;
+    return 9; // no period hint → morning
   }
 
   static int _weekdayFromChinese(String s) {
