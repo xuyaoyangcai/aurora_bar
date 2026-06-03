@@ -2,10 +2,15 @@ import 'package:flutter/foundation.dart';
 import '../models/todo.dart';
 import '../services/note_linker.dart';
 import '../services/storage_service.dart';
+import '../services/theme_engine.dart';
 
 class AppState extends ChangeNotifier {
   final StorageService _storage = StorageService();
   final NoteLinker noteLinker = NoteLinker();
+  final ThemeEngine themeEngine = ThemeEngine();
+
+  Mood _mood = Mood.calm;
+  Mood get mood => _mood;
 
   String _notesDir = '';
   String get notesDir => _notesDir;
@@ -46,6 +51,12 @@ class AppState extends ChangeNotifier {
 
   Future<void> saveConfig(Map<String, dynamic> config) =>
       _storage.saveConfig(config);
+
+  void setMood(Mood mood) {
+    _mood = mood;
+    themeEngine.setMood(mood);
+    notifyListeners();
+  }
 
   void addTodo(String title, {DateTime? dueDate, String? category, List<String>? tags}) {
     final todo = Todo(
