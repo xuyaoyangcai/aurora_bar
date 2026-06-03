@@ -37,10 +37,22 @@ flutter build windows
 ### Ollama (optional, for smart NLP)
 
 1. Install [Ollama](https://ollama.com)
-2. Pull the model: `ollama pull qwen2.5:1.5b`
-3. Make sure Ollama is running (tray icon or `ollama serve`)
+2. (Optional) Set model storage path if you want models on a different drive:
+   ```bash
+   setx OLLAMA_MODELS "D:\ollama\models"
+   ```
+3. Pull the model (~986 MB):
+   ```bash
+   ollama pull qwen2.5:1.5b
+   ```
+4. Make sure Ollama is running (tray icon or `ollama serve`)
+5. Verify:
+   ```bash
+   ollama list
+   # Should show: qwen2.5:1.5b  |  986 MB
+   ```
 
-Without Ollama, the app falls back to regex-based Chinese NLP — still functional for common patterns.
+The app calls Ollama at `http://localhost:11434` with a 4-second timeout. On failure or timeout, it falls back to regex-based Chinese NLP — still functional for common patterns like "明天下午3点交作业".
 
 ## Project Structure
 
