@@ -21,15 +21,38 @@ class _PanelViewState extends State<PanelView> {
   final _inputFocus = FocusNode();
   DateTime? _dueDate;
   String? _category;
+  ParsedTask? _parsedPreview;
   final List<_Sparkle> _sparkles = [];
   late final Timer _sparkleTimer;
+
+  bool _listsEqual(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 
   @override
   void initState() {
     super.initState();
+    _inputCtrl.addListener(_onInputChanged);
     _sparkleTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (mounted && _sparkles.isNotEmpty) setState(() => _sparkles.clear());
     });
+  }
+
+  void _onInputChanged() {
+    final text = _inputCtrl.text.trim();
+    if (text.isEmpty) {
+      if (_parsedPreview != null) setState(() => _parsedPreview = null);
+      return;
+    }
+    final parsed = NlpParser.parse(text);
+    if (_parsedPreview?.dueDate != parsed.dueDate ||
+        !_listsEqual(_parsedPreview?.tags ?? [], parsed.tags)) {
+      setState(() => _parsedPreview = parsed.result);
+    }
   }
 
   @override
@@ -198,6 +221,9 @@ class _PanelViewState extends State<PanelView> {
               ]),
             ),
             _buildInput(),
+            if (_parsedPreview != null &&
+                (_parsedPreview!.dueDate != null || _parsedPreview!.tags.isNotEmpty))
+              _buildParsePreview(),
             const SizedBox(height: 6),
             _buildCategories(),
             if (_dueDate != null) _dueBadge(),
@@ -338,6 +364,39 @@ class _PanelViewState extends State<PanelView> {
           ),
         );
       }).toList()),
+    );
+  }
+
+  Widget _buildParsePreview() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      child: Row(
+        children: [
+          Icon(Icons.auto_awesome, size: 10, color: Colors.white.withOpacity(0.25)),
+          const SizedBox(width: 6),
+          if (_parsedPreview!.dueDate != null) ...[
+            Icon(Icons.schedule, size: 10, color: const Color(0xFFc084fc).withOpacity(0.6)),
+            const SizedBox(width: 3),
+            Text(
+              '${_parsedPreview!.dueDate!.month}/${_parsedPreview!.dueDate!.day} '
+              '${_parsedPreview!.dueDate!.hour}:${_parsedPreview!.dueDate!.minute.toString().padLeft(2, '0')}',
+              style: TextStyle(fontSize: 10, color: const Color(0xFFc084fc).withOpacity(0.6)),
+            ),
+            const SizedBox(width: 8),
+          ],
+          ..._parsedPreview!.tags.map((t) => Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text('#$t', style: TextStyle(fontSize: 9, color: Colors.white.withOpacity(0.3))),
+            ),
+          )),
+        ],
+      ),
     );
   }
 
