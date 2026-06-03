@@ -1,6 +1,20 @@
 /// Lightweight NLP parser for Chinese natural language task input.
 /// Extracts due dates, times, and auto-tags from free-text input.
 class NlpParser {
+  // ── Static regex patterns ──
+
+  static final _tomorrowHourRe = RegExp(
+      r'明天(?:上午|下午|晚上|早上|中午)?(\d{1,2})[点:：](\d{0,2})?');
+  static final _tomorrowRe = RegExp(r'明天');
+  static final _dayAfterRe = RegExp(r'后天');
+  static final _todayHourRe = RegExp(
+      r'今天(?:上午|下午|晚上|早上|中午)?(\d{1,2})[点:：](\d{0,2})?');
+  static final _nextWeekRe = RegExp(r'下周([一二三四五六七日天])');
+  static final _thisWeekRe = RegExp(r'(?:周|星期)([一二三四五六七日天])');
+  static final _monthDayRe = RegExp(r'(\d{1,2})月(\d{1,2})[日号]');
+  static final _bareHourRe = RegExp(
+      r'([上中下晚早]午?|晚上|早上|中午)(\d{1,2})[点:：](\d{0,2})?');
+
   /// Result of parsing a task string.
   final ParsedTask result;
 
@@ -38,32 +52,31 @@ class NlpParser {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    // "明天下午3点" / "明天下午3点半" / "明天下午3:30"
-    final tomorrowHour = RegExp(r'明天[上下]午?(\d{1,2})[点:：](\d{0,2})?');
-    final matchTH = tomorrowHour.firstMatch(text);
+    // "明天下午3点" / "明天3点" / "明天早上7点"
+    final matchTH = _tomorrowHourRe.firstMatch(text);
     if (matchTH != null) {
       int h = int.parse(matchTH.group(1)!);
       final m = matchTH.group(2)?.isNotEmpty == true
           ? int.parse(matchTH.group(2)!)
           : 0;
-      if (text.contains('下') && h < 12) h += 12;
+      if ((text.contains('下') || text.contains('晚')) && h < 12) h += 12;
       if (text.contains('上') && h == 12) h = 0;
-      return today.add(Duration(days: 1)).add(Duration(hours: h, minutes: m));
+      if (text.contains('中')) h = 12;
+      return today.add(const Duration(days: 1)).add(Duration(hours: h, minutes: m));
     }
 
     // "明天" without specific time → 9:00
-    if (RegExp(r'明天').hasMatch(text)) {
+    if (_tomorrowRe.hasMatch(text)) {
       return today.add(const Duration(days: 1, hours: 9));
     }
 
     // "后天" → 9:00
-    if (RegExp(r'后天').hasMatch(text)) {
+    if (_dayAfterRe.hasMatch(text)) {
       return today.add(const Duration(days: 2, hours: 9));
     }
 
-    // "今天下午3点" / "今晚8点" / "今天3点半"
-    final todayHour = RegExp(r'今天[上下晚]?午?(\d{1,2})[点:：](\d{0,2})?');
-    final matchToday = todayHour.firstMatch(text);
+    // "今天下午3点" / "今晚8点" / "今天3点半" / "今天早上7点" / "今天中午12点"
+    final matchToday = _todayHourRe.firstMatch(text);
     if (matchToday != null) {
       int h = int.parse(matchToday.group(1)!);
       final m = matchToday.group(2)?.isNotEmpty == true
@@ -71,12 +84,12 @@ class NlpParser {
           : 0;
       if ((text.contains('下') || text.contains('晚')) && h < 12) h += 12;
       if (text.contains('上') && h == 12) h = 0;
+      if (text.contains('中')) h = 12;
       return today.add(Duration(hours: h, minutes: m));
     }
 
     // "下周X" → next week that day
-    final nextWeek = RegExp(r'下周([一二三四五六七日天])');
-    final matchNW = nextWeek.firstMatch(text);
+    final matchNW = _nextWeekRe.firstMatch(text);
     if (matchNW != null) {
       final dayChar = matchNW.group(1)!;
       final targetWday = _weekdayFromChinese(dayChar);
@@ -84,20 +97,19 @@ class NlpParser {
       return today.add(Duration(days: daysUntil, hours: 9));
     }
 
-    // "周X" / "星期X" → this week (or next if passed)
-    final thisWeek = RegExp(r'(?:周|星期)([一二三四五六七日天])');
-    final matchTW = thisWeek.firstMatch(text);
+    // "周X" / "星期X" → this week (or next if already passed)
+    final matchTW = _thisWeekRe.firstMatch(text);
     if (matchTW != null) {
       final dayChar = matchTW.group(1)!;
       final targetWday = _weekdayFromChinese(dayChar);
       var daysUntil = (targetWday - now.weekday + 7) % 7;
-      if (daysUntil == 0 && now.hour >= 18) daysUntil = 7;
+      final candidate = today.add(Duration(days: daysUntil, hours: 9));
+      if (!candidate.isAfter(now)) daysUntil += 7;
       return today.add(Duration(days: daysUntil, hours: 9));
     }
 
     // "X月Y日" / "X月Y号"
-    final monthDay = RegExp(r'(\d{1,2})月(\d{1,2})[日号]');
-    final matchMD = monthDay.firstMatch(text);
+    final matchMD = _monthDayRe.firstMatch(text);
     if (matchMD != null) {
       final m = int.parse(matchMD.group(1)!);
       final d = int.parse(matchMD.group(2)!);
@@ -105,19 +117,19 @@ class NlpParser {
     }
 
     // "晚上8点" / "下午3点" / "早上9点" (no date prefix)
-    final bareHour =
-        RegExp(r'([上中下晚早]午?|晚上|早上|中午)(\d{1,2})[点:：](\d{0,2})?');
-    final matchBH = bareHour.firstMatch(text);
+    final matchBH = _bareHourRe.firstMatch(text);
     if (matchBH != null) {
       int h = int.parse(matchBH.group(2)!);
       final m = matchBH.group(3)?.isNotEmpty == true
           ? int.parse(matchBH.group(3)!)
           : 0;
       final period = matchBH.group(1)!;
-      if ((period == '下' || period == '下午' || period == '晚' || period == '晚上') && h < 12) {
+      if ((period == '下' || period == '下午' || period == '晚' || period == '晚上') &&
+          h < 12) {
         h += 12;
       }
-      if ((period == '上' || period == '上午' || period == '早' || period == '早上') && h == 12) {
+      if ((period == '上' || period == '上午' || period == '早' || period == '早上') &&
+          h == 12) {
         h = 0;
       }
       if (period == '中' || period == '中午') h = 12;
@@ -138,7 +150,9 @@ class NlpParser {
       '日': 7,
       '天': 7,
     };
-    return map[s] ?? 1;
+    final result = map[s];
+    if (result == null) throw ArgumentError('Unknown weekday character: $s');
+    return result;
   }
 
   // ── Tag extraction ──

@@ -33,6 +33,31 @@ void main() {
       final r = NlpParser.parse('随便写点什么');
       expect(r.dueDate, isNull);
     });
+
+    test('bare 下午3点', () {
+      final r = NlpParser.parse('下午3点开会');
+      expect(r.dueDate, isNotNull);
+      expect(r.dueDate!.hour, 15);
+    });
+
+    test('X月Y日', () {
+      final r = NlpParser.parse('12月25日圣诞节');
+      expect(r.dueDate, isNotNull);
+      expect(r.dueDate!.month, 12);
+      expect(r.dueDate!.day, 25);
+    });
+
+    test('明天3点 without period', () {
+      final r = NlpParser.parse('明天3点交报告');
+      expect(r.dueDate, isNotNull);
+      expect(r.dueDate!.hour, 3);
+    });
+
+    test('早上7点', () {
+      final r = NlpParser.parse('明天早上7点出发');
+      expect(r.dueDate, isNotNull);
+      expect(r.dueDate!.hour, 7);
+    });
   });
 
   group('NlpParser tag extraction', () {
