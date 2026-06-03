@@ -26,6 +26,14 @@ class AuroraPalette {
 class ThemeEngine {
   Mood _mood = Mood.calm;
   String? _weatherCode; // 'clear', 'cloudy', 'rain', 'snow', 'fog'
+  String? _prevWeatherCode;
+  double _weatherIntensity = 0.0;
+
+  /// Current weather code (for shader mapping).
+  String? get weatherCode => _weatherCode;
+
+  /// Slowly ramps 0→1 while same weather persists; resets on change.
+  double get weatherIntensity => _weatherIntensity;
 
   void setMood(Mood mood) => _mood = mood;
   void setWeather(String? code) => _weatherCode = code;
@@ -58,6 +66,15 @@ class ThemeEngine {
 
     base = _applyWeather(base);
     base = _applyMood(base);
+
+    // Ramp weather intensity: up when same non-clear weather persists, reset on change
+    if (_weatherCode != null && _weatherCode != 'clear' && _weatherCode == _prevWeatherCode) {
+      _weatherIntensity = (_weatherIntensity + 0.0004).clamp(0.0, 1.0);
+    } else {
+      _weatherIntensity = 0.0;
+    }
+    _prevWeatherCode = _weatherCode;
+
     return base;
   }
 

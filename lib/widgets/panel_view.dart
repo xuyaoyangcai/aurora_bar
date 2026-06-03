@@ -18,6 +18,7 @@ class PanelView extends StatefulWidget {
   final VoidCallback onCollapse;
   final AuroraPalette palette;
   final String? weatherCode;
+  final double weatherIntensity;
 
   const PanelView({
     super.key,
@@ -25,6 +26,7 @@ class PanelView extends StatefulWidget {
     required this.onCollapse,
     required this.palette,
     this.weatherCode,
+    this.weatherIntensity = 0.0,
   });
 
   @override
@@ -303,10 +305,15 @@ class _PanelViewState extends State<PanelView> {
       child: DynamicBackground(
         palette: widget.palette,
         showAurora: true,
+        weatherCode: widget.weatherCode,
+        weatherIntensity: widget.weatherIntensity,
         child: Stack(
           children: [
             Positioned.fill(
-              child: WeatherParticle(weatherCode: widget.weatherCode),
+              child: WeatherParticle(
+                weatherCode: widget.weatherCode,
+                intensity: widget.weatherIntensity,
+              ),
             ),
             Container(
               margin: const EdgeInsets.all(4),

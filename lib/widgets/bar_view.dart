@@ -10,6 +10,7 @@ class BarView extends StatefulWidget {
   final VoidCallback? onQuit;
   final AuroraPalette palette;
   final String? weatherCode;
+  final double weatherIntensity;
 
   const BarView({
     super.key,
@@ -18,6 +19,7 @@ class BarView extends StatefulWidget {
     this.onQuit,
     required this.palette,
     this.weatherCode,
+    this.weatherIntensity = 0.0,
   });
 
   @override
@@ -53,10 +55,15 @@ class _BarViewState extends State<BarView> {
       child: DynamicBackground(
         palette: widget.palette,
         showAurora: true,
+        weatherCode: widget.weatherCode,
+        weatherIntensity: widget.weatherIntensity,
         child: Stack(
           children: [
             Positioned.fill(
-              child: WeatherParticle(weatherCode: widget.weatherCode),
+              child: WeatherParticle(
+                weatherCode: widget.weatherCode,
+                intensity: widget.weatherIntensity,
+              ),
             ),
             Container(
               margin: const EdgeInsets.all(4),

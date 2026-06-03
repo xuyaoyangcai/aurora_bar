@@ -208,6 +208,7 @@ class _AuroraAppState extends State<AuroraApp> {
       listenable: widget.state,
       builder: (context, _) {
         final palette = widget.state.themeEngine.compute(DateTime.now());
+        final weatherIntensity = widget.state.themeEngine.weatherIntensity;
         if (widget.state.isExpanded) {
           return Scaffold(
             backgroundColor: Colors.transparent,
@@ -216,6 +217,7 @@ class _AuroraAppState extends State<AuroraApp> {
               onCollapse: _collapse,
               palette: palette,
               weatherCode: _weatherCode,
+              weatherIntensity: weatherIntensity,
             ),
           );
         }
@@ -258,6 +260,7 @@ class _AuroraAppState extends State<AuroraApp> {
               onQuit: _quitApp,
               palette: palette,
               weatherCode: _weatherCode,
+              weatherIntensity: weatherIntensity,
             ),
           ),
         );

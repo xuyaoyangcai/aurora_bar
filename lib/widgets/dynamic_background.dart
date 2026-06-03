@@ -2,20 +2,38 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../services/theme_engine.dart';
 
+/// Maps weather code string to shader float: 0=clear, 1=cloud/fog, 2=rain, 3=snow
+double _weatherType(String? code) {
+  switch (code) {
+    case 'cloudy':
+    case 'fog':
+      return 1.0;
+    case 'rain':
+      return 2.0;
+    case 'snow':
+      return 3.0;
+    default:
+      return 0.0;
+  }
+}
+
 /// Renders a dynamic background combining:
 /// - Animated gradient from ThemeEngine palette
-/// - Optional GPU aurora shader overlay (if shader is loaded)
-/// Fragment shader is loaded once and cached.
+/// - GPU aurora shader overlay with weather distortion
 class DynamicBackground extends StatefulWidget {
   final AuroraPalette palette;
   final bool showAurora;
   final Widget? child;
+  final String? weatherCode;
+  final double weatherIntensity;
 
   const DynamicBackground({
     super.key,
     required this.palette,
     this.showAurora = true,
     this.child,
+    this.weatherCode,
+    this.weatherIntensity = 0.0,
   });
 
   @override
@@ -73,6 +91,8 @@ class _DynamicBackgroundState extends State<DynamicBackground>
                     program: _auroraProgram!,
                     time: _controller.value * 60,
                     palette: pal,
+                    weatherType: _weatherType(widget.weatherCode),
+                    weatherIntensity: widget.weatherIntensity,
                   ),
                 ),
               ),
@@ -88,11 +108,15 @@ class _AuroraPainter extends CustomPainter {
   final ui.FragmentProgram program;
   final double time;
   final AuroraPalette palette;
+  final double weatherType;
+  final double weatherIntensity;
 
   _AuroraPainter({
     required this.program,
     required this.time,
     required this.palette,
+    this.weatherType = 0.0,
+    this.weatherIntensity = 0.0,
   });
 
   @override
@@ -110,7 +134,9 @@ class _AuroraPainter extends CustomPainter {
       ..setFloat(8, palette.accent2.blue / 255.0)
       ..setFloat(9, palette.backgroundStart.red / 255.0)
       ..setFloat(10, palette.backgroundStart.green / 255.0)
-      ..setFloat(11, palette.backgroundStart.blue / 255.0);
+      ..setFloat(11, palette.backgroundStart.blue / 255.0)
+      ..setFloat(12, weatherType)
+      ..setFloat(13, weatherIntensity);
 
     canvas.drawRect(
       Offset.zero & size,
@@ -120,5 +146,8 @@ class _AuroraPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_AuroraPainter old) =>
-      old.time != time || old.palette != palette;
+      old.time != time ||
+      old.palette != palette ||
+      old.weatherType != weatherType ||
+      old.weatherIntensity != weatherIntensity;
 }
