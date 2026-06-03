@@ -5,6 +5,7 @@ class Todo {
   final DateTime createdAt;
   DateTime? dueDate;
   String? category; // 'personal', 'work', 'urgent'
+  List<String> tags;
 
   Todo({
     required this.id,
@@ -13,7 +14,9 @@ class Todo {
     DateTime? createdAt,
     this.dueDate,
     this.category,
-  }) : createdAt = createdAt ?? DateTime.now();
+    List<String>? tags,
+  }) : tags = tags ?? [],
+       createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -22,6 +25,7 @@ class Todo {
         'createdAt': createdAt.toIso8601String(),
         'dueDate': dueDate?.toIso8601String(),
         'category': category,
+        'tags': tags,
       };
 
   factory Todo.fromJson(Map<String, dynamic> json) => Todo(
@@ -33,5 +37,8 @@ class Todo {
             ? DateTime.parse(json['dueDate'] as String)
             : null,
         category: json['category'] as String?,
+        tags: json['tags'] != null
+            ? List<String>.from(json['tags'] as List)
+            : null,
       );
 }

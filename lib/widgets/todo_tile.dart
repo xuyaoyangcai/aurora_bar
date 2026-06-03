@@ -160,6 +160,26 @@ class TodoTile extends StatelessWidget {
                               ),
                             ),
                           ),
+                        if (todo.tags.isNotEmpty)
+                          ...todo.tags.map((tag) => Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 5, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.06),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '#$tag',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: Colors.white.withOpacity(0.35),
+                                      fontWeight: FontWeight.w300,
+                                    ),
+                                  ),
+                                ),
+                              )),
                       ],
                     ),
                   ),
