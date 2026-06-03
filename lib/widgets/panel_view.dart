@@ -3,14 +3,27 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import '../services/nlp_parser.dart';
+import '../services/theme_engine.dart';
 import '../state/app_state.dart';
 import 'todo_tile.dart';
 import 'time_picker.dart';
+import 'mood_selector.dart';
+import 'dynamic_background.dart';
+import 'weather_particle.dart';
 
 class PanelView extends StatefulWidget {
   final AppState state;
   final VoidCallback onCollapse;
-  const PanelView({super.key, required this.state, required this.onCollapse});
+  final AuroraPalette palette;
+  final String? weatherCode;
+
+  const PanelView({
+    super.key,
+    required this.state,
+    required this.onCollapse,
+    required this.palette,
+    this.weatherCode,
+  });
 
   @override
   State<PanelView> createState() => _PanelViewState();
@@ -152,27 +165,37 @@ class _PanelViewState extends State<PanelView> {
       case 'urgent': return const Color(0xFFf87171);
       case 'work': return const Color(0xFF60a5fa);
       case 'personal': return const Color(0xFF34d399);
-      default: return const Color(0xFF818cf8);
+      default: return widget.palette.accent1;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xDD0f0c29), Color(0xDD302b63), Color(0xDD24243e)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.1), width: 0.5),
-        boxShadow: [
-          BoxShadow(color: const Color(0xFF6366f1).withOpacity(0.15), blurRadius: 30, spreadRadius: -4),
-          BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 16),
-        ],
-      ),
-      child: Stack(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: DynamicBackground(
+        palette: widget.palette,
+        showAurora: true,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: WeatherParticle(weatherCode: widget.weatherCode),
+            ),
+            Container(
+              margin: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xDD0f0c29), Color(0xDD302b63), Color(0xDD24243e)],
+                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white.withOpacity(0.1), width: 0.5),
+                boxShadow: [
+                  BoxShadow(color: const Color(0xFF6366f1).withOpacity(0.15), blurRadius: 30, spreadRadius: -4),
+                  BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 16),
+                ],
+              ),
+              child: Stack(
         children: [
           Column(children: [
             Padding(
@@ -182,7 +205,7 @@ class _PanelViewState extends State<PanelView> {
                 GestureDetector(
                   onTap: widget.onCollapse,
                   onPanStart: (_) => windowManager.startDragging(),
-                  child: const _MiniClock(),
+                  child: _MiniClock(palette: widget.palette),
                 ),
                 const Spacer(),
                 // Peek button
@@ -226,6 +249,11 @@ class _PanelViewState extends State<PanelView> {
               _buildParsePreview(),
             const SizedBox(height: 6),
             _buildCategories(),
+            const SizedBox(height: 6),
+            MoodSelector(
+              current: widget.state.mood,
+              onChanged: widget.state.setMood,
+            ),
             if (_dueDate != null) _dueBadge(),
             const SizedBox(height: 8),
             Expanded(child: ListenableBuilder(
@@ -264,7 +292,7 @@ class _PanelViewState extends State<PanelView> {
                   duration: const Duration(milliseconds: 800),
                   builder: (c, v, _) => Opacity(
                     opacity: v,
-                    child: Transform.scale(scale: 2 - v, child: const Icon(Icons.auto_awesome, size: 12, color: Color(0xFFc084fc))),
+                    child: Transform.scale(scale: 2 - v, child: Icon(Icons.auto_awesome, size: 12, color: widget.palette.accent2)),
                   ),
                 )),
               )),
@@ -276,16 +304,20 @@ class _PanelViewState extends State<PanelView> {
                 width: 36, height: 36,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(colors: [Color(0xFF818cf8), Color(0xFFc084fc)]),
-                  boxShadow: [BoxShadow(color: const Color(0xFF818cf8).withOpacity(0.4), blurRadius: 12)],
+                  gradient: LinearGradient(colors: [widget.palette.accent1, widget.palette.accent2]),
+                  boxShadow: [BoxShadow(color: widget.palette.accent1.withOpacity(0.4), blurRadius: 12)],
                 ),
                 child: const Icon(Icons.auto_awesome, size: 16, color: Colors.white),
               ),
             ),
           ),
+              ],
+            ),
+          ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildInput() {
@@ -299,7 +331,7 @@ class _PanelViewState extends State<PanelView> {
         ),
         child: Row(children: [
           const SizedBox(width: 14),
-          const Icon(Icons.add, size: 16, color: Color(0xFF818cf8)),
+          Icon(Icons.add, size: 16, color: widget.palette.accent1),
           const SizedBox(width: 8),
           Expanded(child: TextField(
             controller: _inputCtrl, focusNode: _inputFocus,
@@ -318,10 +350,10 @@ class _PanelViewState extends State<PanelView> {
               width: 32, height: 32,
               margin: const EdgeInsets.only(right: 4),
               decoration: BoxDecoration(
-                color: _dueDate != null ? const Color(0xFFc084fc).withOpacity(0.2) : Colors.white.withOpacity(0.05),
+                color: _dueDate != null ? widget.palette.accent2.withOpacity(0.2) : Colors.white.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.schedule, size: 14, color: _dueDate != null ? const Color(0xFFc084fc) : Colors.white.withOpacity(0.3)),
+              child: Icon(Icons.schedule, size: 14, color: _dueDate != null ? widget.palette.accent2 : Colors.white.withOpacity(0.3)),
             ),
           ),
           GestureDetector(
@@ -330,10 +362,10 @@ class _PanelViewState extends State<PanelView> {
               width: 32, height: 32,
               margin: const EdgeInsets.only(right: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFF818cf8).withOpacity(0.2),
+                color: widget.palette.accent1.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.arrow_forward_ios, size: 12, color: Color(0xFF818cf8)),
+              child: Icon(Icons.arrow_forward_ios, size: 12, color: widget.palette.accent1),
             ),
           ),
         ]),
@@ -375,12 +407,12 @@ class _PanelViewState extends State<PanelView> {
           Icon(Icons.auto_awesome, size: 10, color: Colors.white.withOpacity(0.25)),
           const SizedBox(width: 6),
           if (_parsedPreview!.dueDate != null) ...[
-            Icon(Icons.schedule, size: 10, color: const Color(0xFFc084fc).withOpacity(0.6)),
+            Icon(Icons.schedule, size: 10, color: widget.palette.accent2.withOpacity(0.6)),
             const SizedBox(width: 3),
             Text(
               '${_parsedPreview!.dueDate!.month}/${_parsedPreview!.dueDate!.day} '
               '${_parsedPreview!.dueDate!.hour}:${_parsedPreview!.dueDate!.minute.toString().padLeft(2, '0')}',
-              style: TextStyle(fontSize: 10, color: const Color(0xFFc084fc).withOpacity(0.6)),
+              style: TextStyle(fontSize: 10, color: widget.palette.accent2.withOpacity(0.6)),
             ),
             const SizedBox(width: 8),
           ],
@@ -404,10 +436,10 @@ class _PanelViewState extends State<PanelView> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Row(children: [
-        const Icon(Icons.schedule, size: 12, color: Color(0xFFc084fc)),
+        Icon(Icons.schedule, size: 12, color: widget.palette.accent2),
         const SizedBox(width: 4),
         Text('Due: ${_dueDate!.month}/${_dueDate!.day} ${_dueDate!.hour}:${_dueDate!.minute.toString().padLeft(2, '0')}',
-          style: const TextStyle(color: Color(0xFFc084fc), fontSize: 11, fontWeight: FontWeight.w300)),
+          style: TextStyle(color: widget.palette.accent2, fontSize: 11, fontWeight: FontWeight.w300)),
       ]),
     );
   }
@@ -421,7 +453,7 @@ class _PanelViewState extends State<PanelView> {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.auto_awesome, size: 36, color: Color(0xFF818cf8)),
+            Icon(Icons.auto_awesome, size: 36, color: widget.palette.accent1),
             const SizedBox(height: 10),
             Text(g, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 16, fontWeight: FontWeight.w200, letterSpacing: 2)),
             const SizedBox(height: 4),
@@ -434,7 +466,8 @@ class _PanelViewState extends State<PanelView> {
 }
 
 class _MiniClock extends StatefulWidget {
-  const _MiniClock();
+  final AuroraPalette palette;
+  const _MiniClock({required this.palette});
   @override
   State<_MiniClock> createState() => _MiniClockState();
 }
@@ -459,8 +492,8 @@ class _MiniClockState extends State<_MiniClock> {
     final h = _now.hour.toString().padLeft(2, '0');
     final m = _now.minute.toString().padLeft(2, '0');
     return ShaderMask(
-      shaderCallback: (bounds) => const LinearGradient(
-        colors: [Color(0xFF818cf8), Color(0xFFc084fc)],
+      shaderCallback: (bounds) => LinearGradient(
+        colors: [widget.palette.accent1, widget.palette.accent2],
       ).createShader(bounds),
       child: Text('$h:$m', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w200, color: Colors.white, letterSpacing: 3)),
     );
