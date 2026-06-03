@@ -114,7 +114,7 @@ class TodoTile extends StatelessWidget {
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (deadline.isNotEmpty || catLabel.isNotEmpty)
+                if (deadline.isNotEmpty || catLabel.isNotEmpty || todo.tags.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 3),
                     child: Row(
