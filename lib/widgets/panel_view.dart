@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
+import '../models/todo.dart';
 import '../services/nlp_parser.dart';
+import '../services/ollama_nlp_service.dart';
 import '../services/theme_engine.dart';
 import '../state/app_state.dart';
 import 'todo_tile.dart';
@@ -110,24 +112,148 @@ class _PanelViewState extends State<PanelView> {
     });
   }
 
-  void _addTodo() {
+  Future<void> _addTodo() async {
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
     _inputCtrl.clear();
 
-    final parsed = NlpParser.parse(text);
-    final due = _dueDate ?? parsed.dueDate;
-    final cat = _category;
-    final tags = parsed.tags;
+    // Always run regex first (reliable date extraction)
+    final regexResult = NlpParser.parse(text).result;
+    // Try Ollama for smarter title + extra tags (merges below)
+    ParsedTask? ollamaResult;
+    try {
+      ollamaResult = await OllamaNlpService.parse(text);
+    } catch (_) {}
+
+    // Merge: regex date is more reliable; Ollama title/tags if available
+    final due = _dueDate ?? regexResult.dueDate;
+    final title = ollamaResult?.title ?? regexResult.title;
+    final tags = <String>{
+      ...regexResult.tags,
+      if (ollamaResult != null) ...ollamaResult.tags,
+    }.toList();
 
     setState(() {
       _dueDate = null;
       _category = null;
     });
-    widget.state.addTodo(parsed.title, dueDate: due, category: cat, tags: tags);
+    widget.state.addTodo(title, dueDate: due, category: _category, tags: tags);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _inputFocus.requestFocus();
     });
+  }
+
+  void _editTodo(Todo todo) {
+    final titleCtrl = TextEditingController(text: todo.title);
+    DateTime? editDue = todo.dueDate;
+    String? editCat = todo.category;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1e1b3a),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Edit Task', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 16)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Task title',
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white.withOpacity(0.15))),
+                  focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF818cf8))),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Categories
+              Row(children: ['personal', 'work', 'urgent'].map((c) {
+                final sel = editCat == c;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: GestureDetector(
+                    onTap: () => setDialogState(() => editCat = sel ? null : c),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: sel ? _catColor(c).withOpacity(0.2) : Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: sel ? _catColor(c).withOpacity(0.4) : Colors.white.withOpacity(0.08)),
+                      ),
+                      child: Text(_catLabel(c), style: TextStyle(fontSize: 11, color: sel ? _catColor(c) : Colors.white.withOpacity(0.4))),
+                    ),
+                  ),
+                );
+              }).toList()),
+              const SizedBox(height: 10),
+              // Due date
+              GestureDetector(
+                onTap: () async {
+                  final picked = await showDialog<DateTime>(
+                    context: ctx,
+                    builder: (_) => Center(
+                      child: SingleChildScrollView(
+                        child: Container(
+                          width: 340,
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: CompactTimePicker(
+                              initial: editDue,
+                              onPicked: (dt) => Navigator.of(ctx).pop(dt),
+                              onClear: () => Navigator.of(ctx).pop(null),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                  if (picked != null) setDialogState(() => editDue = picked);
+                },
+                child: Row(children: [
+                  Icon(Icons.schedule, size: 14, color: editDue != null ? widget.palette.accent2 : Colors.white.withOpacity(0.3)),
+                  const SizedBox(width: 6),
+                  Text(
+                    editDue != null
+                        ? '${editDue!.month}/${editDue!.day} ${editDue!.hour}:${editDue!.minute.toString().padLeft(2, '0')}'
+                        : 'Set due date',
+                    style: TextStyle(fontSize: 12, color: editDue != null ? widget.palette.accent2 : Colors.white.withOpacity(0.3)),
+                  ),
+                  if (editDue != null) ...[
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () => setDialogState(() => editDue = null),
+                      child: Icon(Icons.close, size: 12, color: Colors.white.withOpacity(0.2)),
+                    ),
+                  ],
+                ]),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text('Cancel', style: TextStyle(color: Colors.white.withOpacity(0.4))),
+            ),
+            TextButton(
+              onPressed: () {
+                widget.state.updateTodo(
+                  todo.id,
+                  title: titleCtrl.text.trim().isNotEmpty ? titleCtrl.text.trim() : null,
+                  dueDate: editDue,
+                  category: editCat,
+                );
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('Save', style: TextStyle(color: Color(0xFF818cf8))),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _toggleTodo(String id) {
@@ -268,6 +394,7 @@ class _PanelViewState extends State<PanelView> {
                     ...active.map((t) => TodoTile(
                           todo: t, onToggle: () => _toggleTodo(t.id),
                           onDelete: () => widget.state.removeTodo(t.id),
+                          onTap: () => _editTodo(t),
                         )),
                     if (done.isNotEmpty) ...[
                       const SizedBox(height: 8),
@@ -278,6 +405,7 @@ class _PanelViewState extends State<PanelView> {
                       ...done.map((t) => TodoTile(
                             todo: t, onToggle: () => _toggleTodo(t.id),
                             onDelete: () => widget.state.removeTodo(t.id),
+                            onTap: () => _editTodo(t),
                           )),
                     ],
                   ],

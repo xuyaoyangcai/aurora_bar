@@ -1,6 +1,6 @@
 class Todo {
   final String id;
-  final String title;
+  String title;
   bool completed;
   final DateTime createdAt;
   DateTime? dueDate;

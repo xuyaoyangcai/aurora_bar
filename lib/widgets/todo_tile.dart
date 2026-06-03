@@ -5,22 +5,27 @@ class TodoTile extends StatelessWidget {
   final Todo todo;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
+  final VoidCallback? onTap;
 
   const TodoTile({
     super.key,
     required this.todo,
     required this.onToggle,
     required this.onDelete,
+    this.onTap,
   });
 
   String _deadlineLabel() {
     final due = todo.dueDate;
     if (due == null) return '';
-    final diff = due.difference(DateTime.now());
-    if (diff.inDays == 0) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dueDay = DateTime(due.year, due.month, due.day);
+    final dayDiff = dueDay.difference(today).inDays;
+    if (dayDiff == 0) {
       return 'Today ${due.hour}:${due.minute.toString().padLeft(2, '0')}';
     }
-    if (diff.inDays == 1) {
+    if (dayDiff == 1) {
       return 'Tomorrow ${due.hour}:${due.minute.toString().padLeft(2, '0')}';
     }
     return '${due.month}/${due.day} ${due.hour}:${due.minute.toString().padLeft(2, '0')}';
@@ -58,7 +63,10 @@ class TodoTile extends StatelessWidget {
     final catColor = _categoryColor();
     final catLabel = _categoryLabel();
 
-    final child = Container(
+    final child = GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -196,6 +204,7 @@ class TodoTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
 

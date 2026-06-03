@@ -1,16 +1,61 @@
-# aurora_bar
+# Aurora Bar
 
-A new Flutter project.
+A minimalist, frameless desktop task manager for Windows. Sits at the edge of your screen as a subtle bar, expands into a full panel when clicked.
+
+## Features
+
+- **Semantic Task Input** — Type naturally in Chinese (e.g. "明天下午3点交数学作业"), auto-parses due date and tags
+- **AI-Powered NLP** — Local Ollama model (qwen2.5:1.5b) for smarter parsing, falls back to regex
+- **Dynamic Background** — Time-of-day gradient + weather-driven aurora shader + particle effects (rain/snow/clouds/fog)
+- **Mood Tracking** — 5 moods (calm/focused/energetic/tired/creative) influence the color palette
+- **Weather** — Auto-fetched from wttr.in, drives particles and theme overlay
+- **Three Window States** — Collapsed bar (360x60) → Expanded panel (360x420) → Peek strip (28x60)
+- **Swipe Gestures** — Swipe right to complete, left to delete
+- **Tap to Edit** — Tap any task to edit title, category, or due date
+
+## Tech Stack
+
+- **Flutter** (Dart) — cross-platform desktop framework
+- **window_manager** — frameless, always-on-top, transparent window
+- **FragmentShader** (GLSL) — GPU aurora effect
+- **Ollama** — local LLM for NLP (qwen2.5:1.5b)
+- **wttr.in** — free weather API
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+```bash
+# Install dependencies
+flutter pub get
 
-A few resources to get you started if this is your first Flutter project:
+# Run in debug mode
+flutter run -d windows
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+# Build release exe
+flutter build windows
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Ollama (optional, for smart NLP)
+
+1. Install [Ollama](https://ollama.com)
+2. Pull the model: `ollama pull qwen2.5:1.5b`
+3. Make sure Ollama is running (tray icon or `ollama serve`)
+
+Without Ollama, the app falls back to regex-based Chinese NLP — still functional for common patterns.
+
+## Project Structure
+
+```
+lib/
+├── main.dart                  — Window setup & app entry
+├── models/todo.dart           — Todo data model
+├── state/app_state.dart       — Central state (ChangeNotifier)
+├── services/
+│   ├── storage_service.dart   — JSON persistence
+│   ├── weather_service.dart   — wttr.in weather
+│   ├── nlp_parser.dart        — Regex NLP parser
+│   ├── ollama_nlp_service.dart— Ollama NLP service
+│   ├── note_linker.dart       — Notes directory linking
+│   └── theme_engine.dart      — Dynamic color palette
+├── widgets/                   — UI components
+└── shaders/aurora.frag        — GPU aurora shader
+```

@@ -71,6 +71,17 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateTodo(String id, {String? title, DateTime? dueDate, String? category, List<String>? tags}) {
+    final idx = todos.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+    if (title != null) todos[idx].title = title;
+    if (dueDate != null) todos[idx].dueDate = dueDate;
+    if (category != null) todos[idx].category = category;
+    if (tags != null) todos[idx].tags = tags;
+    _save();
+    notifyListeners();
+  }
+
   void toggleTodo(String id) {
     final idx = todos.indexWhere((t) => t.id == id);
     if (idx == -1) return;
